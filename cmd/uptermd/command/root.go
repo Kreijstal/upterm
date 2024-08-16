@@ -35,6 +35,10 @@ func Root(logger log.FieldLogger) *cobra.Command {
 	cmd.PersistentFlags().StringP("metric-addr", "", "", "metric server address")
 	cmd.PersistentFlags().BoolP("debug", "", os.Getenv("DEBUG") != "", "debug")
 
+        cmd.PersistentFlags().BoolP("allow-password-auth", "", false, "allow password authentication")
+        cmd.PersistentFlags().StringP("password", "", "", "password for authentication (if allow-password-auth is true)")
+
+
 	return cmd
 }
 

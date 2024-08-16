@@ -12,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	gossh "golang.org/x/crypto/ssh"
 	"google.golang.org/protobuf/proto"
+	"errors"
 )
 
 var (
@@ -31,6 +32,9 @@ type sshd struct {
 
 	server *ssh.Server
 	mux    sync.Mutex
+
+	AllowPasswordAuth bool
+        Password          string
 }
 
 func (s *sshd) Shutdown() error {
@@ -71,6 +75,15 @@ func (s *sshd) Serve(ln net.Listener) error {
 			config := &gossh.ServerConfig{
 				ServerVersion: upterm.ServerSSHServerVersion,
 			}
+if s.AllowPasswordAuth {
+    config.PasswordCallback = func(c gossh.ConnMetadata, pass []byte) (*gossh.Permissions, error) {
+        if string(pass) == s.Password {
+            return nil, nil
+        }
+	s.Logger.WithField("user", c.User()).Info("Password authentication failed")
+        return nil, errors.New("invalid password")
+    }
+}
 			return config
 		},
 		ReversePortForwardingCallback: ssh.ReversePortForwardingCallback(func(ctx ssh.Context, host string, port uint32) (granted bool) {
@@ -78,6 +91,9 @@ func (s *sshd) Serve(ln net.Listener) error {
 			return true
 		}),
 		PublicKeyHandler: func(ctx ssh.Context, key ssh.PublicKey) bool {
+		if s.AllowPasswordAuth {
+        	        return true // Allow connection to proceed to password auth if enabled
+         	   }
 			checker := UserCertChecker{}
 			_, _, err := checker.Authenticate(ctx.User(), key)
 			if err != nil {

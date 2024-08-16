@@ -35,6 +35,8 @@ type Opt struct {
 	NetworkOpts []string `mapstructure:"network-opt"`
 	MetricAddr  string   `mapstructure:"metric-addr"`
 	Debug       bool     `mapstructure:"debug"`
+       AllowPasswordAuth bool `mapstructure:"allow-password-auth"`
+        Password          string `mapstructure:"password"`
 }
 
 func Start(opt Opt) error {
@@ -139,6 +141,8 @@ func Start(opt Opt) error {
 			NetworkProvider: network,
 			Logger:          logger.WithField("com", "server"),
 			MetricsProvider: mp,
+		        AllowPasswordAuth: opt.AllowPasswordAuth,
+		        Password:          opt.Password,
 		}
 		g.Add(func() error {
 			return s.ServeWithContext(context.Background(), sshln, wsln)
@@ -189,6 +193,9 @@ type Server struct {
 	mux    sync.Mutex
 	ctx    context.Context
 	cancel func()
+
+	AllowPasswordAuth bool
+	Password          string
 }
 
 func (s *Server) Shutdown() {
@@ -296,6 +303,8 @@ func (s *Server) ServeWithContext(ctx context.Context, sshln net.Listener, wsln 
 			NodeAddr:            s.NodeAddr,
 			SessionDialListener: sessionDialListener,
 			Logger:              s.Logger.WithField("com", "sshd"),
+                        AllowPasswordAuth:   s.AllowPasswordAuth,
+                        Password:            s.Password,
 		}
 		g.Add(func() error {
 			return sshd.Serve(ln)
